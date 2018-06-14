@@ -22,7 +22,9 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/lib/pq/oid"
+	"github.com/apcera/gssapi"
+
+	"github.com/greenplum-db/gp-golang-libpq/oid"
 )
 
 // Common error types
@@ -115,6 +117,16 @@ type conn struct {
 	// Whether to always send []byte parameters over as binary.  Enables single
 	// round-trip mode for non-prepared Query calls.
 	binaryParameters bool
+
+	//GSS related
+	krbsrvname string
+	pghost     string
+	gsslib     *gssapi.Lib
+	gctx       *gssapi.CtxId
+	gtargName  *gssapi.Name
+	guserName  *gssapi.Name
+	ginbuf     *gssapi.Buffer
+	goutbuf    *gssapi.Buffer
 }
 
 // Handle driver-side settings in parsed connection string.
@@ -315,6 +327,7 @@ func DialOpen(d Dialer, name string) (_ driver.Conn, err error) {
 		return nil, err
 	}
 	cn.ssl(o)
+	cn.gss(o)
 	cn.buf = bufio.NewReader(cn.c)
 	cn.startup(o)
 
@@ -1125,6 +1138,98 @@ func (cn *conn) setupSSLCA(tlsConf *tls.Config, o values) {
 	}
 }
 
+func (cn *conn) gss(o values) {
+	cn.krbsrvname = o.Get("krbsrvname")
+	cn.pghost = o.Get("host")
+	opt := &gssapi.Options{LoadDefault: gssapi.MIT}
+	var err error
+	cn.gsslib, err = gssapi.Load(opt)
+	if err != nil {
+		cn.gsslib = nil
+	}
+}
+
+func (cn *conn) gssStartup(user string) {
+	// check host
+	if len(cn.pghost) == 0 {
+		errorf("host name must be specified")
+	}
+	// check gctx
+	if cn.gctx != nil {
+		errorf("duplicate GSS authentication request")
+	}
+	// import name
+	nameBuf, err := cn.gsslib.MakeBufferString(fmt.Sprintf("%s@%s", cn.krbsrvname, cn.pghost))
+	defer nameBuf.Release()
+	cn.gtargName, err = nameBuf.Name(cn.gsslib.GSS_C_NT_HOSTBASED_SERVICE)
+	if err != nil {
+		errorf("GSSAPI name import error")
+	}
+	userBuf, err := cn.gsslib.MakeBufferString(user)
+	defer userBuf.Release()
+	cn.guserName, err = userBuf.Name(cn.gsslib.GSS_KRB5_NT_PRINCIPAL_NAME)
+	if err != nil {
+		errorf("GSSAPI user name import error")
+	}
+	cn.gctx = cn.gsslib.GSS_C_NO_CONTEXT
+	cn.gssContinue()
+}
+
+func (cn *conn) gssContinue() {
+	//Init GSS context
+	var inbuf *gssapi.Buffer
+	if cn.gctx == cn.gsslib.GSS_C_NO_CONTEXT {
+		inbuf = cn.gsslib.GSS_C_NO_BUFFER
+	} else {
+		inbuf = cn.ginbuf
+	}
+	cred, actualMechs, _, err := cn.gsslib.AcquireCred(cn.guserName, gssapi.GSS_C_INDEFINITE, cn.gsslib.GSS_C_NO_OID_SET, gssapi.GSS_C_BOTH)
+	actualMechs.Release()
+	if cred == nil {
+		cred = cn.gsslib.GSS_C_NO_CREDENTIAL
+	}
+	cn.gctx, _, cn.goutbuf, _, _, err = cn.gsslib.InitSecContext(
+		cred,
+		nil,
+		cn.gtargName,
+		cn.gsslib.GSS_C_NO_OID,
+		0,
+		0,
+		cn.gsslib.GSS_C_NO_CHANNEL_BINDINGS,
+		inbuf)
+
+	if cn.gctx != cn.gsslib.GSS_C_NO_CONTEXT {
+		cn.ginbuf.Release()
+	}
+	cred.Release()
+
+	if cn.goutbuf.Length() != 0 {
+		// Send packet
+		w := cn.writeBuf('p')
+		w.kstring(cn.goutbuf.String())
+		cn.send(w)
+		t, r := cn.recv()
+		if t != 'R' {
+			errorf("unexpected gss response: %q", t)
+		}
+
+		if r.int32() != 0 {
+			errorf("unexpected authentication response: %q", t)
+		}
+
+	}
+
+	if err != nil {
+		e, ok := err.(*gssapi.Error)
+		if ok && !e.Major.ContinueNeeded() {
+			cn.gtargName.Release()
+			cn.gctx.Release()
+			errorf("GSSAPI continuation error: %s", e.Error())
+		}
+	}
+	cn.goutbuf.Release()
+}
+
 // isDriverSetting returns true iff a setting is purely for configuring the
 // driver's options and should not be sent to the server in the connection
 // startup packet.
@@ -1145,6 +1250,9 @@ func isDriverSetting(key string) bool {
 	case "binary_parameters":
 		return true
 
+	// GSSAPI related
+	case "krbsrvname", "gsslib":
+		return true
 	default:
 		return false
 	}
@@ -1220,6 +1328,18 @@ func (cn *conn) auth(r *readBuf, o values) {
 
 		if r.int32() != 0 {
 			errorf("unexpected authentication response: %q", t)
+		}
+	case 7:
+		// AUTH_REQ_GSS: GSSAPI without wrap()
+		if cn.gsslib != nil {
+			cn.gssStartup(o.Get("user"))
+		}
+	case 8:
+		// AUTH_REQ_GSS_CONT: Continue GSS exchanges
+		// TODO lock thread?
+		if cn.gsslib != nil {
+			// TODO need to check inbuf size?
+			cn.gssContinue()
 		}
 	default:
 		errorf("unknown authentication response: %d", code)
@@ -1824,8 +1944,10 @@ func parseEnviron(env []string) (out map[string]string) {
 			unsupported()
 		case "PGREQUIREPEER":
 			unsupported()
-		case "PGKRBSRVNAME", "PGGSSLIB":
-			unsupported()
+		case "PGKRBSRVNAME":
+			accrue("krbsrvname")
+		case "PGGSSLIB":
+			accrue("gsslib")
 		case "PGCONNECT_TIMEOUT":
 			accrue("connect_timeout")
 		case "PGCLIENTENCODING":

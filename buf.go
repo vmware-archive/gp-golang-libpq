@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 
-	"github.com/lib/pq/oid"
+	"github.com/greenplum-db/gp-golang-libpq/oid"
 )
 
 type readBuf []byte
@@ -67,6 +67,10 @@ func (b *writeBuf) int16(n int) {
 
 func (b *writeBuf) string(s string) {
 	b.buf = append(b.buf, (s + "\000")...)
+}
+
+func (b *writeBuf) kstring(s string) {
+	b.buf = append(b.buf, s...)
 }
 
 func (b *writeBuf) byte(c byte) {
