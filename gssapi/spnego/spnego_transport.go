@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/apcera/gssapi"
+	"github.com/greenplum-db/gp-golang-libpq/gssapi"
 )
 
 const negotiateScheme = "Negotiate"
