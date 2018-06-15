@@ -371,7 +371,6 @@ func (ar *ActiveRecord) InAddQuotes(vals []string, args ...interface{}) Mockable
 	for _, val := range vals {
 		qvals = append(qvals, fmt.Sprintf("'%s'", val))
 	}
-	ar.AddArgs(args)
 	return ar.In(qvals)
 }
 
