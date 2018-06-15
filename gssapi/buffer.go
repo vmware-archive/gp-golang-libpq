@@ -3,7 +3,7 @@
 package gssapi
 
 /*
-#cgo CFLAGS: -I../../../../../installer/krb5/include
+#cgo CFLAGS: -I./krb5/include
 #include <stdlib.h>
 #include <string.h>
 

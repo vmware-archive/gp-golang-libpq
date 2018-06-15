@@ -19,7 +19,7 @@ package gssapi
 
 /*
 #cgo darwin CFLAGS: -I/opt/local/include -I/usr/local/opt/heimdal/include
-#cgo CFLAGS: -I../../../../../installer/krb5/include
+#cgo CFLAGS: -I./krb5/include
 #include <stdio.h>
 
 #include <gssapi/gssapi.h>
