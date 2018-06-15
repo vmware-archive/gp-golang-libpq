@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/greenplum-db/gp-golang-libpq/oid"
+	"github.com/greenplum-db/gp-golang-libpq/pq/oid"
 )
 
 func binaryEncode(parameterStatus *parameterStatus, x interface{}) []byte {

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 
-	"github.com/greenplum-db/gp-golang-libpq/oid"
+	"github.com/greenplum-db/gp-golang-libpq/pq/oid"
 )
 
 type readBuf []byte

@@ -24,7 +24,7 @@ import (
 
 	"github.com/apcera/gssapi"
 
-	"github.com/greenplum-db/gp-golang-libpq/oid"
+	"github.com/greenplum-db/gp-golang-libpq/pq/oid"
 )
 
 // Common error types

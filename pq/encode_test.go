@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/greenplum-db/gp-golang-libpq/oid"
+	"github.com/greenplum-db/gp-golang-libpq/pq/oid"
 )
 
 func TestScanTimestamp(t *testing.T) {
