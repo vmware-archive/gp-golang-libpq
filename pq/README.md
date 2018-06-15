@@ -1,10 +1,7 @@
 This repo is a fork from github.com/lib/pq
 
-We added kerberos support, please run
+We added kerberos support, need the forked version of gssapi lib under gp-golang-libpq.
 
-	go get github.com/apcera/gssapi
-
-before use this library.
 
 # pq - A pure Go postgres driver for Go's database/sql package
 
