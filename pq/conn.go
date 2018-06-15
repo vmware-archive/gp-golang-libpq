@@ -22,7 +22,7 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/apcera/gssapi"
+	"github.com/greenplum-db/gp-golang-libpq/gssapi"
 
 	"github.com/greenplum-db/gp-golang-libpq/pq/oid"
 )
