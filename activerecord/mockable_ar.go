@@ -55,4 +55,5 @@ type MockableActiveRecord interface {
 	SubAR(sub MockableActiveRecord, alias string) string
 	ArgsString() string
 	PrintableString() string
+	Begin() (MockableTx, error)
 }

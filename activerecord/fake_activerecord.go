@@ -6,8 +6,10 @@ import "database/sql"
 type FakeActiveRecord struct {
 	*ActiveRecord
 	MockGetRows func() ([]map[string]interface{}, error)
-	MockGetRow  func(tokens []string) (map[string]interface{}, error)
+	MockGetRow func(tokens []string) (map[string]interface{}, error)
 	MockExecSQL func(sql string, args ...interface{}) (sql.Result, error)
+	MockBegin   func() (MockableTx, error)
+	MockClose   func()
 }
 
 // NewFakeActiveRecord return a *FakeActiveRecord
@@ -18,7 +20,11 @@ func NewFakeActiveRecord() *FakeActiveRecord {
 		return nil, nil
 	}, func(sql string, args ...interface{}) (sql.Result, error) {
 		return nil, nil
-	}}
+	}, func() (MockableTx, error) {
+		return nil, nil
+	},
+		func() {},
+	}
 }
 
 // GetRows will call MockGetRows in MockActiveRecord if it is set
@@ -43,4 +49,19 @@ func (m *FakeActiveRecord) ExecSQL(sql string, args ...interface{}) (sql.Result,
 		return m.MockExecSQL(sql, args)
 	}
 	return nil, nil
+}
+
+// Begin will call Begin if it is set
+func (m *FakeActiveRecord) Begin() (MockableTx, error) {
+	if m.MockBegin != nil {
+		return m.MockBegin()
+	}
+	return nil, nil
+}
+
+// Begin will call Begin if it is set
+func (m *FakeActiveRecord) Close() {
+	if m.MockClose != nil {
+		m.MockClose()
+	}
 }
