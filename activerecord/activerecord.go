@@ -552,3 +552,8 @@ func (ar *ActiveRecord) GetTokens() []string {
 func (ar *ActiveRecord) GetArgs() []interface{} {
 	return ar.Args
 }
+
+// Begin begin a real transaction
+func (ar *ActiveRecord) Begin() (MockableTx, error) {
+	return ar.DB.Begin()
+}
