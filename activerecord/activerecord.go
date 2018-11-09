@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
 	"github.com/greenplum-db/gp-golang-libpq/pq"
 )
 
@@ -87,50 +86,7 @@ func (ar *ActiveRecord) GetRows() (result []map[string]interface{}, err error) {
 		}
 	}()
 
-	columns, err := rows.Columns()
-	if err != nil {
-		return nil, err
-	}
-
-	dest := make([]interface{}, len(columns))
-	fields := make([]interface{}, len(columns))
-	for i := range fields {
-		dest[i] = &fields[i]
-	}
-
-	for rows.Next() {
-		if err := rows.Scan(dest...); err != nil {
-			return nil, err
-		}
-
-		r := make(map[string]interface{})
-		for i, v := range fields {
-			if str, ok := v.(string); ok {
-				r[columns[i]] = str
-			} else {
-				switch v.(type) {
-				case time.Time:
-					t := v.(time.Time)
-					r[columns[i]] = t.String()[:19]
-				case []uint8:
-					r[columns[i]] = string(v.([]uint8))
-				default:
-					r[columns[i]] = v
-				}
-			}
-		}
-
-		result = append(result, r)
-	}
-
-	if err := rows.Err(); err != nil {
-		if err == driver.ErrBadConn {
-			return result, nil
-		}
-		return nil, err
-
-	}
-	return result, nil
+	return parseRows(rows)
 }
 
 // GetRowsI get rows as map[string]interface{}
@@ -151,18 +107,15 @@ func (ar *ActiveRecord) GetRowsI(query string, args ...interface{}) (result []ma
 	if err != nil {
 		return nil, err
 	}
-
 	dest := make([]interface{}, len(columns))
 	fields := make([]interface{}, len(columns))
 	for i := range fields {
 		dest[i] = &fields[i]
 	}
-
 	for rows.Next() {
 		if err := rows.Scan(dest...); err != nil {
 			return nil, err
 		}
-
 		r := make(map[string]interface{})
 		for i, value := range fields {
 			switch v := value.(type) {
@@ -210,10 +163,8 @@ func (ar *ActiveRecord) GetRowsI(query string, args ...interface{}) (result []ma
 				r[columns[i]] = v
 			}
 		}
-
 		result = append(result, r)
 	}
-
 	if err := rows.Err(); err != nil {
 		if err == driver.ErrBadConn {
 			return result, nil
@@ -555,5 +506,46 @@ func (ar *ActiveRecord) GetArgs() []interface{} {
 
 // Begin begin a real transaction
 func (ar *ActiveRecord) Begin() (MockableTx, error) {
-	return ar.DB.Begin()
+	return newActiveTx(ar.DB)
+}
+
+func parseRows(rows *sql.Rows) (result []map[string]interface{}, err error) {
+	columns, err := rows.Columns()
+	if err != nil {
+		return nil, err
+	}
+	dest := make([]interface{}, len(columns))
+	fields := make([]interface{}, len(columns))
+	for i := range fields {
+		dest[i] = &fields[i]
+	}
+	for rows.Next() {
+		if err := rows.Scan(dest...); err != nil {
+			return nil, err
+		}
+		r := make(map[string]interface{})
+		for i, v := range fields {
+			if str, ok := v.(string); ok {
+				r[columns[i]] = str
+			} else {
+				switch v.(type) {
+				case time.Time:
+					t := v.(time.Time)
+					r[columns[i]] = t.String()[:19]
+				case []uint8:
+					r[columns[i]] = string(v.([]uint8))
+				default:
+					r[columns[i]] = v
+				}
+			}
+		}
+		result = append(result, r)
+	}
+	if err := rows.Err(); err != nil {
+		if err == driver.ErrBadConn {
+			return result, nil
+		}
+		return nil, err
+	}
+	return result, nil
 }

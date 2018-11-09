@@ -8,23 +8,36 @@ type FakeTx struct {
 	MockExec     func(query string, args ...interface{}) (sql.Result, error)
 	MockRollback func() (error)
 	MockCommit   func() (error)
+	MockGetRow   func(query string) (result map[string]interface{}, err error)
+	MockGetRows func(query string) (result []map[string]interface{}, err error)
 }
 
 // NewFakeTx return a *FakeTx
 func NewFakeTx() *FakeTx {
-	return &FakeTx{&sql.Tx{}, func(query string, args ...interface{}) (sql.Result, error) {
-		return nil, nil
-	}, func() (error) {
-		return nil
-	}, func() (error) {
-		return nil
-	}}
+	return &FakeTx{
+		&sql.Tx{},
+		func(query string, args ...interface{}) (sql.Result, error) {
+			return nil, nil
+		},
+		func() (error) {
+			return nil
+		},
+		func() (error) {
+			return nil
+		},
+		func(query string) (result map[string]interface{}, err error) {
+			return nil, nil
+		},
+		func(query string) (result []map[string]interface{}, err error) {
+			return nil, nil
+		},
+	}
 }
 
 // Exec will call MockExec in FakeTx if it is set
 func (m *FakeTx) Exec(query string, args ...interface{}) (sql.Result, error) {
 	if m.MockExec != nil {
-		return m.MockExec(query, args)
+		return m.MockExec(query, args...)
 	}
 	return nil, nil
 }
@@ -43,4 +56,20 @@ func (m *FakeTx) Commit() (error) {
 		return m.MockCommit()
 	}
 	return nil
+}
+
+// MockGetRow will call MockQuery if set
+func (m *FakeTx) GetRow(query string) (result map[string]interface{}, err error) {
+	if m.MockGetRow != nil {
+		return m.MockGetRow(query)
+	}
+	return nil, nil
+}
+
+// MockGetRow will call MockQuery if set
+func (m *FakeTx) GetRows(query string) (result []map[string]interface{}, err error) {
+	if m.MockGetRows != nil {
+		return m.MockGetRows(query)
+	}
+	return nil, nil
 }
