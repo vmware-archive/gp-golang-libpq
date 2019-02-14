@@ -57,3 +57,30 @@ func (m *activeTx) GetRows(query string) (result []map[string]interface{}, err e
 
 	return parseRows(rows)
 }
+
+// Exec execute query in a transaction
+func (m *activeTx) Prepare(query string) (MockableStmt, error) {
+	return newActiveStmt(m.tx, query)
+}
+
+type activeStmt struct {
+	stmt *sql.Stmt
+}
+
+// newActiveStmt return a *activeStmt
+func newActiveStmt(tx *sql.Tx, query string) (MockableStmt, error) {
+	astmt := &activeStmt{}
+	var err error
+	astmt.stmt, err = tx.Prepare(query)
+	return astmt, err
+}
+
+// Exec execute a statement
+func (ast *activeStmt) Exec(args ...interface{}) (sql.Result, error) {
+	return ast.stmt.Exec(args...)
+}
+
+// Close a active statement
+func (ast *activeStmt) Close() (error) {
+	return ast.stmt.Close()
+}

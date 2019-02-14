@@ -73,3 +73,25 @@ func (m *FakeTx) GetRows(query string) (result []map[string]interface{}, err err
 	}
 	return nil, nil
 }
+
+// FakeStmt is only for test.
+type FakeStmt struct {
+	MockExec  func(args ...interface{}) (sql.Result, error)
+	MockClose func() (error)
+}
+
+// MockGetRow will call MockQuery if set
+func (m *FakeStmt) Exec(args ...interface{}) (sql.Result, error) {
+	if m.MockExec != nil {
+		return m.MockExec(args)
+	}
+	return nil, nil
+}
+
+// MockGetRow will call MockQuery if set
+func (m *FakeStmt) Close() (error) {
+	if m.MockClose != nil {
+		return m.MockClose()
+	}
+	return nil
+}
