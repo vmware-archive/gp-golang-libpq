@@ -2,10 +2,10 @@ This repo is a fork from github.com/lib/pq
 
 We added kerberos support, need the forked version of gssapi lib under gp-golang-libpq.
 
-
 # pq - A pure Go postgres driver for Go's database/sql package
 
-[![Build Status](https://travis-ci.org/lib/pq.png?branch=master)](https://travis-ci.org/lib/pq)
+[![GoDoc](https://godoc.org/github.com/lib/pq?status.svg)](https://godoc.org/github.com/lib/pq)
+[![Build Status](https://travis-ci.org/lib/pq.svg?branch=master)](https://travis-ci.org/lib/pq)
 
 ## Install
 
@@ -18,18 +18,7 @@ documentation at <http://godoc.org/github.com/lib/pq>.
 
 ## Tests
 
-`go test` is used for testing.  A running PostgreSQL server is
-required, with the ability to log in.  The default database to connect
-to test with is "pqgotest," but it can be overridden using environment
-variables.
-
-Example:
-
-	PGHOST=/run/postgresql go test github.com/lib/pq
-
-Optionally, a benchmark suite can be run as part of the tests:
-
-	PGHOST=/run/postgresql go test -bench .
+`go test` is used for testing.  See [TESTS.md](TESTS.md) for more details.
 
 ## Features
 
