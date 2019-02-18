@@ -58,7 +58,7 @@ func (m *activeTx) GetRows(query string) (result []map[string]interface{}, err e
 	return parseRows(rows)
 }
 
-// Exec execute query in a transaction
+// Prepare a query statement
 func (m *activeTx) Prepare(query string) (MockableStmt, error) {
 	return newActiveStmt(m.tx, query)
 }
