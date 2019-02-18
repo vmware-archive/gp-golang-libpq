@@ -11,7 +11,7 @@ type MockableTx interface {
 	Commit() error
 	GetRow(query string) (result map[string]interface{}, err error)
 	GetRows(query string) (result []map[string]interface{}, err error)
-	Prepare(query string)(MockableStmt, error)
+	Prepare(query string) (MockableStmt, error)
 }
 
 type MockableStmt interface {

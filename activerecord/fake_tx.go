@@ -10,6 +10,7 @@ type FakeTx struct {
 	MockCommit   func() (error)
 	MockGetRow   func(query string) (result map[string]interface{}, err error)
 	MockGetRows func(query string) (result []map[string]interface{}, err error)
+	MockPrepare func(query string) (MockableStmt, error)
 }
 
 // NewFakeTx return a *FakeTx
@@ -31,6 +32,9 @@ func NewFakeTx() *FakeTx {
 		func(query string) (result []map[string]interface{}, err error) {
 			return nil, nil
 		},
+		func(query string) (MockableStmt, error) {
+			return nil, nil
+		},
 	}
 }
 
@@ -42,7 +46,7 @@ func (m *FakeTx) Exec(query string, args ...interface{}) (sql.Result, error) {
 	return nil, nil
 }
 
-// Rollback will call Rollback in FakeTx if it is set
+// Rollback will call MockRollback in FakeTx if it is set
 func (m *FakeTx) Rollback() (error) {
 	if m.MockRollback != nil {
 		return m.MockRollback()
@@ -50,7 +54,7 @@ func (m *FakeTx) Rollback() (error) {
 	return nil
 }
 
-// ExecSQL will call Commit if it is set
+// Commit will call MockCommit in FakeTx if it is set
 func (m *FakeTx) Commit() (error) {
 	if m.MockCommit != nil {
 		return m.MockCommit()
@@ -58,7 +62,7 @@ func (m *FakeTx) Commit() (error) {
 	return nil
 }
 
-// MockGetRow will call MockQuery if set
+// GetRow will call MockGetRow in FakeTx if it is set
 func (m *FakeTx) GetRow(query string) (result map[string]interface{}, err error) {
 	if m.MockGetRow != nil {
 		return m.MockGetRow(query)
@@ -66,10 +70,18 @@ func (m *FakeTx) GetRow(query string) (result map[string]interface{}, err error)
 	return nil, nil
 }
 
-// MockGetRow will call MockQuery if set
+// GetRows will call MockGetRows in FakeTx if it is set
 func (m *FakeTx) GetRows(query string) (result []map[string]interface{}, err error) {
 	if m.MockGetRows != nil {
 		return m.MockGetRows(query)
+	}
+	return nil, nil
+}
+
+// Prepare will call MockPrepare in FakeTx if it is set
+func (m *FakeTx) Prepare(query string) (MockableStmt, error) {
+	if m.MockPrepare != nil {
+		return m.MockPrepare(query)
 	}
 	return nil, nil
 }
@@ -80,7 +92,7 @@ type FakeStmt struct {
 	MockClose func() (error)
 }
 
-// MockGetRow will call MockQuery if set
+// Exec will call MockExec in FakeStmt if it is set
 func (m *FakeStmt) Exec(args ...interface{}) (sql.Result, error) {
 	if m.MockExec != nil {
 		return m.MockExec(args)
@@ -88,7 +100,7 @@ func (m *FakeStmt) Exec(args ...interface{}) (sql.Result, error) {
 	return nil, nil
 }
 
-// MockGetRow will call MockQuery if set
+// Close will call MockClose in FakeStmt if it is set
 func (m *FakeStmt) Close() (error) {
 	if m.MockClose != nil {
 		return m.MockClose()
